@@ -1,0 +1,4 @@
+2026-01-18 19:39:17,041 | WARNING | from=('127.0.0.1', 52495) prio=3 time=2026-01-18 19:39:17 event=EMERGENCY_BRAKE msg=PHANH G\u1ea4P! Xe phía tr\u01b0\u1edbc gi\u1ea3m t\u1ed1c \u0111\u1ed9t ng\u1ed9t!
+2026-01-18 19:39:19,113 | INFO | from=('127.0.0.1', 52495) prio=2 time=2026-01-18 19:39:19 event=OBSTACLE_AHEAD msg=CÓ V\u1eacT C\u1ea2N PHÍA TR\u01af\u1edaC! Gi\u1ea3m t\u1ed1c ngay!
+2026-01-18 19:39:25,214 | INFO | from=('127.0.0.1', 52495) prio=1 time=2026-01-18 19:39:25 event=POSITION_UPDATE msg=\u0110\u1ecbnh v\u1ecb: xe A v\u1eabn \u0111ang ch\u1ea1y bình th\u01b0\u1eddng.
+2026-01-18 19:39:43,251 | WARNING | from=('127.0.0.1', 52495) prio=3 time=2026-01-18 19:39:43 event=EMERGENCY_BRAKE msg=PHANH G\u1ea4P! Xe phía tr\u01b0\u1edbc gi\u1ea3m t\u1ed1c \u0111\u1ed9t ng\u1ed9t!

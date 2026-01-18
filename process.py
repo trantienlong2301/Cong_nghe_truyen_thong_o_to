@@ -1,42 +1,64 @@
 import socket
 import sys
 import threading
-import time
+from datetime import datetime
 import struct
-import random
-import msvcrt
+import json
+import logging
 
 if len(sys.argv) < 2:
     print(" Thiếu tham số, dùng giá trị mặc định để test")
-    length = 2.0
-    width  = 1.5
     car_id = "TEST"
 else:
     
-    car_id = int(sys.argv[1])
+    car_id = sys.argv[1]
 
 SERVER_ADDR = ("127.0.0.1", 6000)
 
 MCAST_GRP = "224.1.1.1"
 MCAST_PORT = 5007
 
-lat = lon = speed = heading = struct.pack("<f", 0)
-warning = threading.Event()
 
-def crc16_ccitt(data: bytes, poly=0x1021, init=0xFFFF):
-    crc = init
-    for b in data:
-        crc ^= (b << 8)
-        for _ in range(8):
-            if crc & 0x8000:
-                crc = (crc << 1) ^ poly
-            else:
-                crc <<= 1
-            crc &= 0xFFFF
-    return crc
+def safe_json_load(line):
+    try:
+        return json.loads(line)
+    except json.JSONDecodeError:
+        return None
 
+def setup_logger():
+    logging.basicConfig(
+        filename=f"{car_id}_log.txt",
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(message)s"
+    )
+
+def now():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def send_json(sock, obj):
+    data = (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
+    sock.sendto(data,SERVER_ADDR)
+
+def send_event(sock, event_name, message, priority):
+    """
+    Gửi thông báo V2V dạng EVENT + priority
+    priority: 3 (cao) / 2 (trung bình) / 1 (thấp)
+    """
+    event = {
+        "type": "EVENT",
+        "time": now(),
+        "from": f"{car_id}",
+        "event_name": event_name,
+        "priority": int(priority),
+        "message": message
+    }
+    send_json(sock, event)
+    print(f" ĐÃ GỬI EVENT: {event_name} | priority={priority}")
+    
 # ===== nhận multicast =====
 def receive_multicast():
+    setup_logger()
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
     #  BẮT BUỘC trên Windows
@@ -56,83 +78,98 @@ def receive_multicast():
     )
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
-    while True:
-        data, _ = sock.recvfrom(1024)
-        recv_crc = struct.unpack("<H", data[-2:])[0]
-        calc_crc = crc16_ccitt(data[:-2])
-        if recv_crc != calc_crc:
-            print(" CRC lỗi")
-            continue
+    buffer = ""
 
-        id = data[1]
-        if (id == car_id) :
-            continue
-        lat, lon, speed, heading = struct.unpack("<ffff", data[2:18])
-        type = data[0]
-        if (type == 0):
-            print(
-                f"Xe {id} | "
-                f"Kinh do={lat:.6f} Vi do={lon:.6f} "
-                f"Van toc ={speed:.2f} Huong={heading:.1f}"
-            )
-        else:
-            print(
-                f"Warning "
-                f"Xe {id} | "
-                f"Kinh do={lat:.6f} Vi do={lon:.6f} "
-                f"Van toc ={speed:.2f} Huong={heading:.1f}"
-            )
+    while True:
+        try:
+            data = sock.recv(4096).decode("utf-8", errors="ignore")
+            if not data:
+                print(" khong co data\n")
+                break
+        except Exception as e:
+            print(f" Lỗi recv: {e}")
+            break
+        buffer += data
+
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
+            if not line.strip():
+                continue
+
+            msg = safe_json_load(line)
+            if not msg:
+                continue
+
+            if msg.get("type") == "EVENT":
+                id = msg.get("from", "")
+                if id == car_id:
+                    continue
+                t = msg.get("time", "")
+                event_name = msg.get("event_name", "UNKNOWN")
+                message = msg.get("message", "")
+                priority = int(msg.get("priority", 1))
+
+                # ghi log: priority cao ghi WARNING
+                log_line = f"from={id} prio={priority} time={t} event={event_name} msg={message}"
+                if priority >= 3:
+                    logging.warning(log_line)
+                else:
+                    logging.info(log_line)
+
+                # in màn hình
+                print("=====================================")
+                print(f"NHẬN TIN NHẮN V2V từ xe {id}")
+                print(f"Time     : {t}")
+                print(f"Event    : {event_name}")
+                print(f"Priority : {priority}")
+                print(f"Message  : {message}")
+                if priority >= 3:
+                    print("Action   : CẢNH BÁO KHẨN / PHANH GẤP")
+                elif priority == 2:
+                    print("Action   : CẢNH BÁO / GIẢM TỐC")
+                else:
+                    print("Action   : THÔNG TIN / THEO DÕI")
+                print("=====================================\n")
+
 
 
 
 # ===== gửi dữ liệu =====
 def send_data():
-    global lat, lon, speed,heading,warning
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
-    while True:
-        if(not warning.is_set()):
-            lat = random.uniform(10.0, 11.0)
-            lon = random.uniform(106.0, 107.0)
-            speed = random.uniform(0, 30)
-            heading = random.uniform(0, 360)
-            type = 0x00
-        else:
-            type = 0x01
-            speed = 0
-        payload = struct.pack(
-            "<ffff",   # little-endian float
-            lat, lon, speed, heading
-        )
-    
-        body = struct.pack("B", type) + struct.pack("B", car_id) + payload
-        crc = crc16_ccitt(body)
-        package = body + struct.pack("<H", crc)
-        sock.sendto(package, SERVER_ADDR)
-        time.sleep(0.1)
+    try:
+        while True:
+            choice = input(" Chọn: ").strip()
 
-def keyboard_listener():
-    global warning
-    print("Nhan SPACE de bat/tat WARNING")
+            if choice == "1":
+                send_event(sock, "EMERGENCY_BRAKE",
+                        "PHANH GẤP! Xe phía trước giảm tốc đột ngột!",
+                        priority=3)
 
-    while True:
-        if msvcrt.kbhit():          # có phím được nhấn
-            key = msvcrt.getch()
-            if key == b' ':         # SPACE
-                if warning.is_set():
-                    warning.clear()
-                    print("WARNING OFF")
-                else:
-                    warning.set()
-                    print("WARNING ON")
-        time.sleep(0.05)
+            elif choice == "2":
+                send_event(sock, "OBSTACLE_AHEAD",
+                        "CÓ VẬT CẢN PHÍA TRƯỚC! Giảm tốc ngay!",
+                        priority=2)
+
+            elif choice == "3":
+                send_event(sock, "POSITION_UPDATE",
+                        "Định vị: xe A vẫn đang chạy bình thường.",
+                        priority=1)
+
+            elif choice == "0":
+                print(" Xe A thoát.")
+                break
+            else:
+                print(" Lựa chọn không hợp lệ")
+    except Exception as e:
+        print("LỖI:", e)
+        input("Nhấn Enter để thoát...")
+
+
 
 if __name__ == "__main__":
     print(f" Xe {car_id} khởi động",flush=True)
 
     threading.Thread(target=receive_multicast, daemon=True).start()
-    threading.Thread(
-        target=keyboard_listener,
-        daemon=True
-    ).start()
+    
     send_data()

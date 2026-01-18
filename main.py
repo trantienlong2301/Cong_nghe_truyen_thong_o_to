@@ -7,17 +7,6 @@ MCAST_GRP = "224.1.1.1"
 MCAST_PORT = 5007
 LOCAL_PORT = 6000
 
-def crc16_ccitt(data: bytes, poly=0x1021, init=0xFFFF):
-    crc = init
-    for b in data:
-        crc ^= (b << 8)
-        for _ in range(8):
-            if crc & 0x8000:
-                crc = (crc << 1) ^ poly
-            else:
-                crc <<= 1
-            crc &= 0xFFFF
-    return crc
 
 def multicast_server():
     print(" Multicast server đang chạy...", flush=True)
@@ -52,15 +41,22 @@ if __name__ == "__main__":
         ("Xe 1", "process.py", "1"),
         ("Xe 2", "process.py", "2"),
         ("Xe 3", "process.py", "3"),
+        ("Xe 4", "process.py", "4"),
     ]
 
     procs = []
+
     for title, script, cid in cars:
+        cmd = (
+            f'cmd /k "title Xe {cid} && {sys.executable} {script} {cid}"'
+        )
+
         p = subprocess.Popen(
-            [sys.executable, script, cid],
+            cmd,
             creationflags=subprocess.CREATE_NEW_CONSOLE
         )
         procs.append(p)
+   
 
     #  giữ main sống đúng cách
     try:
@@ -69,4 +65,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n Tắt toàn bộ xe")
         for p in procs:
-            p.terminate()
+            subprocess.call(
+                ["taskkill", "/F", "/T", "/PID", str(p.pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )

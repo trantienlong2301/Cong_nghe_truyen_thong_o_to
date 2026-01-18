@@ -9,3 +9,11 @@
 2026-01-18 21:10:01,593 | INFO | from=3 prio=1 time=2026-01-18 21:10:01 event=POSITION_UPDATE msg=\u0110\u1ecbnh v\u1ecb: xe A v\u1eabn \u0111ang ch\u1ea1y bình th\u01b0\u1eddng.
 2026-01-18 21:10:03,545 | WARNING | from=3 prio=3 time=2026-01-18 21:10:03 event=EMERGENCY_BRAKE msg=PHANH G\u1ea4P! Xe phía tr\u01b0\u1edbc gi\u1ea3m t\u1ed1c \u0111\u1ed9t ng\u1ed9t!
 2026-01-18 21:10:10,643 | INFO | from=2 prio=1 time=2026-01-18 21:10:10 event=POSITION_UPDATE msg=\u0110\u1ecbnh v\u1ecb: xe A v\u1eabn \u0111ang ch\u1ea1y bình th\u01b0\u1eddng.
+2026-01-18 21:50:25,954 | INFO | from=3 prio=2 time=2026-01-18 21:50:25 event=OBSTACLE_AHEAD msg=CÓ V\u1eacT C\u1ea2N PHÍA TR\u01af\u1edaC! Gi\u1ea3m t\u1ed1c ngay!
+2026-01-18 21:51:30,618 | WARNING | from=3 prio=3 time=2026-01-18 21:51:30 event=EMERGENCY_BRAKE msg=PHANH G\u1ea4P! Xe phía tr\u01b0\u1edbc gi\u1ea3m t\u1ed1c \u0111\u1ed9t ng\u1ed9t!
+2026-01-18 21:51:33,341 | INFO | from=1 prio=1 time=2026-01-18 21:51:33 event=POSITION_UPDATE msg=\u0110\u1ecbnh v\u1ecb: xe A v\u1eabn \u0111ang ch\u1ea1y bình th\u01b0\u1eddng.
+2026-01-18 21:51:36,930 | WARNING | from=2 prio=3 time=2026-01-18 21:51:36 event=EMERGENCY_BRAKE msg=PHANH G\u1ea4P! Xe phía tr\u01b0\u1edbc gi\u1ea3m t\u1ed1c \u0111\u1ed9t ng\u1ed9t!
+2026-01-18 22:00:39,027 | WARNING | from=3 prio=3 time=2026-01-18 22:00:39 event=EMERGENCY_BRAKE msg=PHANH G\u1ea4P! Xe phía tr\u01b0\u1edbc gi\u1ea3m t\u1ed1c \u0111\u1ed9t ng\u1ed9t!
+2026-01-18 22:01:38,750 | INFO | from=3 prio=2 time=2026-01-18 22:01:38 event=OBSTACLE_AHEAD msg=CÓ V\u1eacT C\u1ea2N PHÍA TR\u01af\u1edaC! Gi\u1ea3m t\u1ed1c ngay!
+2026-01-18 22:01:43,111 | INFO | from=2 prio=1 time=2026-01-18 22:01:43 event=POSITION_UPDATE msg=\u0110\u1ecbnh v\u1ecb: xe A v\u1eabn \u0111ang ch\u1ea1y bình th\u01b0\u1eddng.
+2026-01-18 22:01:46,547 | WARNING | from=1 prio=3 time=2026-01-18 22:01:46 event=EMERGENCY_BRAKE msg=PHANH G\u1ea4P! Xe phía tr\u01b0\u1edbc gi\u1ea3m t\u1ed1c \u0111\u1ed9t ng\u1ed9t!

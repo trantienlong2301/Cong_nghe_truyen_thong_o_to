@@ -13,9 +13,9 @@ else:
     
     car_id = sys.argv[1]
 
-SERVER_ADDR = ("127.0.0.1", 6000)
+# SERVER_ADDR = ("127.0.0.1", 6000)
 
-MCAST_GRP = "224.1.1.1"
+MCAST_GRP = "225.225.225.225"
 MCAST_PORT = 5007
 
 
@@ -37,7 +37,7 @@ def now():
 
 def send_json(sock, obj):
     data = (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
-    sock.sendto(data,SERVER_ADDR)
+    sock.sendto(data,(MCAST_GRP, MCAST_PORT))
 
 def send_event(sock, event_name, message, priority):
     """

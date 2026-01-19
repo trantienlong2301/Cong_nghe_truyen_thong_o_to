@@ -3,8 +3,8 @@ import subprocess
 import time
 import sys
 
-MCAST_GRP = "224.1.1.1"
-MCAST_PORT = 5007
+# MCAST_GRP = "224.1.1.1"
+# MCAST_PORT = 5007
 # LOCAL_PORT = 6000
 
 

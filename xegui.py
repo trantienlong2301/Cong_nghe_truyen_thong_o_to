@@ -1,82 +1,128 @@
 import socket
-import json
+import sys
+import threading
 from datetime import datetime
+import struct
+import json
+import logging
+# ===== SỬA IP =====
+MY_NAME = "CarB"
+MY_PORT = 5001
 
-# ===== CONFIG WIFI =====
-CAR_B_IP = "127.0.0.1"   # nếu chạy cùng máy: đổi thành "127.0.0.1"
-PORT = 5000
-# =======================
+CAR_A_IP = "192.168.239.32"   # IP laptop A
+CAR_C_IP = "192.168.239.10"   # IP laptop C
+# ==================
+
+NEIGHBORS = [
+    (CAR_A_IP, 5000, "CarA"),
+    (CAR_C_IP, 5002, "CarC"),
+]
+logging.basicConfig(
+    filename="carA_log.txt",
+    level=logging.INFO,
+    format="%(asctime)s | %(message)s"
+)
 
 def now():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-def send_json(sock, obj):
-    data = (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
-    sock.sendall(data)
+def event_id():
+    return str(datetime.now().timestamp())
 
-def send_event(sock, event_name, message, priority):
-    """
-    Gửi thông báo V2V dạng EVENT + priority
-    priority: 3 (cao) / 2 (trung bình) / 1 (thấp)
-    """
-    event = {
-        "type": "EVENT",
-        "time": now(),
-        "from": "CarA",
-        "to": "CarB",
-        "event_name": event_name,
-        "priority": int(priority),
-        "message": message
-    }
-    send_json(sock, event)
-    print(f"✅ ĐÃ GỬI EVENT: {event_name} | priority={priority}")
+# ---------- PHẦN NHẬN ----------
+def recv_loop():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(("0.0.0.0", MY_PORT))
+    server.listen(5)
 
-def menu():
-    print("\n🚗 Xe A – EVENT ONLY")
-    print("1) 🚨 PHANH GẤP (priority=3)")
-    print("2) ⚠️ VẬT CẢN PHÍA TRƯỚC (priority=2)")
-    print("3) ℹ️ ĐỊNH VỊ / TRẠNG THÁI (priority=1)")
-    print("0) Thoát")
-
-def main():
-    print("🚗 Xe A khởi động (CHỈ GỬI EVENT – KHÔNG BSM)")
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.settimeout(5.0)
-
-    try:
-        client.connect((CAR_B_IP, PORT))
-    except Exception as e:
-        print(f"❌ Không kết nối được Xe B: {e}")
-        return
-
-    print(f"✅ Đã kết nối Xe B tại {CAR_B_IP}:{PORT}")
+    seen = set()
+    print(f"📡 {MY_NAME} listening port {MY_PORT}")
 
     while True:
-        menu()
-        choice = input("👉 Chọn: ").strip()
+        conn, addr = server.accept()
+        buf = ""
 
-        if choice == "1":
-            send_event(client, "EMERGENCY_BRAKE",
-                       "PHANH GẤP! Xe phía trước giảm tốc đột ngột!",
-                       priority=3)
+        while True:
+            data = conn.recv(4096).decode("utf-8", errors="ignore")
+            if not data: break
+            buf += data
 
-        elif choice == "2":
-            send_event(client, "OBSTACLE_AHEAD",
-                       "CÓ VẬT CẢN PHÍA TRƯỚC! Giảm tốc ngay!",
-                       priority=2)
+            while "\n" in buf:
+                line, buf = buf.split("\n", 1)
+                try:
+                    msg = json.loads(line)
+                except:
+                    continue
 
-        elif choice == "3":
-            send_event(client, "POSITION_UPDATE",
-                       "Định vị: xe A vẫn đang chạy bình thường.",
-                       priority=1)
+                if msg.get("type") != "EVENT": 
+                    continue
 
-        elif choice == "0":
-            print("👋 Xe A thoát.")
-            break
-        else:
-            print("❌ Lựa chọn không hợp lệ")
+                eid = msg.get("event_id")
+                if eid in seen: 
+                    continue
+                seen.add(eid)
 
-    client.close()
+                pr = int(msg.get("priority",1))
+                act = "KHẨN" if pr>=3 else "GIẢM TỐC" if pr==2 else "THÔNG TIN"
 
-if __name__ == "__main__":
-    main()
+                log = f"{msg['time']} | {msg['from']} | {msg['event_name']} | {pr} | {msg['message']}"
+                logging.info(log)
+
+                print("\n=== NHẬN V2V ===")
+                print("Từ      :", msg["from"])
+                print("Sự kiện :", msg["event_name"])
+                print("Ưu tiên :", pr)
+                print("Action  :", act)
+                print("Nội dung:", msg["message"])
+                print("================\n")
+
+        conn.close()
+
+# ---------- PHẦN GỬI ----------
+def send_all(name, pr, text):
+    payload = {
+        "type": "EVENT",
+        "event_id": event_id(),
+        "time": now(),
+        "from": MY_NAME,
+        "event_name": name,
+        "priority": pr,
+        "message": text
+    }
+
+    data = (json.dumps(payload, ensure_ascii=False)+"\n").encode()
+
+    for ip, port, who in NEIGHBORS:
+        try:
+            s = socket.socket()
+            s.settimeout(3)
+            s.connect((ip, port))
+            s.sendall(data)
+            s.close()
+            print(f"✅ Gửi tới {who}")
+        except Exception as e:
+            print(f"❌ Lỗi gửi {who}: {e}")
+
+def menu():
+    print(f"\n🚗 {MY_NAME}")
+    print("1) Phanh gấp (3)")
+    print("2) Vật cản (2)")
+    print("3) Định vị (1)")
+    print("0) Thoát")
+
+# ---------- MAIN ----------
+threading.Thread(target=recv_loop, daemon=True).start()
+
+while True:
+    menu()
+    c = input("Chọn: ")
+
+    if c=="1":
+        send_all("EMERGENCY_BRAKE",3,"PHANH GẤP!")
+    elif c=="2":
+        send_all("OBSTACLE_AHEAD",2,"Có vật cản!")
+    elif c=="3":
+        send_all("POSITION_UPDATE",1,"Định vị OK")
+    elif c=="0":
+        break

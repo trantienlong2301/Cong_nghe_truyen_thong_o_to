@@ -8,15 +8,15 @@ import logging
 
 if len(sys.argv) < 2:
     print(" Thiếu tham số, dùng giá trị mặc định để test")
-    car_id = "TEST"
-else:
-    
+    car_id = "3"
+else:   
     car_id = sys.argv[1]
 
 # SERVER_ADDR = ("127.0.0.1", 6000)
 
-MCAST_GRP = "225.225.225.225"
-MCAST_PORT = 5007
+BCAST_ADDR = "255.255.255.255"
+PORT = 5007
+
 
 
 def safe_json_load(line):
@@ -37,7 +37,8 @@ def now():
 
 def send_json(sock, obj):
     data = (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
-    sock.sendto(data,(MCAST_GRP, MCAST_PORT))
+    # sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock.sendto(data,(BCAST_ADDR, PORT))
 
 def send_event(sock, event_name, message, priority):
     """
@@ -55,30 +56,16 @@ def send_event(sock, event_name, message, priority):
     send_json(sock, event)
     print(f" ĐÃ GỬI EVENT: {event_name} | priority={priority}")
     
-# ===== nhận multicast =====
+
 def receive_multicast():
     setup_logger()
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-
-    #  BẮT BUỘC trên Windows
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-    try:
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-    except:
-        pass  # Windows có thể không hỗ trợ
-
-    sock.bind(("", MCAST_PORT))
-
-    mreq = struct.pack(
-        "4sl",
-        socket.inet_aton(MCAST_GRP),
-        socket.INADDR_ANY
-    )
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    sock.bind(("", PORT))
 
     buffer = ""
+
 
     while True:
         try:
@@ -137,6 +124,7 @@ def receive_multicast():
 # ===== gửi dữ liệu =====
 def send_data():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     try:
         while True:
             choice = input(" Chọn: ").strip()

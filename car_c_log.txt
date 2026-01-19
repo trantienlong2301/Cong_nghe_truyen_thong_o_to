@@ -1,0 +1,1 @@
+2026-01-19 06:47:40,437 | 2026-01-18 23:47:40 | CarA | EMERGENCY_BRAKE | 3 | PHANH G\u1ea4P! Xe phía tr\u01b0\u1edbc gi\u1ea3m t\u1ed1c \u0111\u1ed9t ng\u1ed9t!
